@@ -46,9 +46,6 @@
 // Filesystem
 #define DATA_FILE "/temps.csv"
 
-// Watchdog helper
-#define WDT_FEED() yield()
-
 /* =========================================================
    MQTT
    ========================================================= */
@@ -131,7 +128,7 @@ bool ensureWiFi(uint32_t timeoutMs = 30000) {
       return false;
     }
     delay(250);
-    WDT_FEED();
+    yield();
   }
 
   Serial.println("WiFi connected");
@@ -159,7 +156,7 @@ bool ensureMQTT(uint32_t timeoutMs = 10000) {
     }
 
     delay(1000);
-    WDT_FEED();
+    yield();
   }
   return true;
 }
@@ -181,7 +178,7 @@ void publishStoredData() {
   }
 
   while (src.available()) {
-    WDT_FEED();
+    yield();
 
     String line = src.readStringUntil('\n');
     if (line.length() < 5) continue;
@@ -273,5 +270,5 @@ void loop() {
 
   mqtt.processPackets(10);
   mqtt.ping();
-  WDT_FEED();
+  yield();
 }
