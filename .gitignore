@@ -1,0 +1,21 @@
+# Secret configuration (use config.h.example as template)
+src/config.h
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Build artifacts
+*.o
+*.elf
+*.bin
+
+# OS files
+.DS_Store
+Thumbs.db
