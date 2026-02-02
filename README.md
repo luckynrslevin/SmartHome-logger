@@ -19,6 +19,27 @@ ESP8266-based temperature logger with DS18B20 sensors and Adafruit IO integratio
 
 ### Wiring
 
+```
+                        4.7kΩ
+                      ┌─/\/\/─┐
+                      │       │
+┌─────┐  ┌──────────┐ │       │┌──────────────┐                       ┌──────────────┐
+│     │  │  ESP8266 │ │       ││   DS18B20    │                       │   DS18B20    │
+│ USB │  │          │ │       ││   (Sensor 1) │                       │   (Sensor 2) │
+│  5V ├──┤ VIN      │ │       ││              │                       │              │
+│     │  │     3.3V ├─┴───────┼┤ VCC      ────┼───────────────────────┤ VCC          │
+│ GND ├──┤ GND      │         ││              │                       │              │
+│     │  │       D4 ├─────────┴┤ DATA     ────┼───────────────────────┤ DATA         │
+│     │  │          │          │              │                       │              │
+└─────┘  │      GND ├──────────┤ GND      ────┼───────────────────────┤ GND          │
+         │          │          │              │                       │              │
+         └──────────┘          └──────────────┘                       └──────────────┘
+
+USB provides 5V power to ESP8266 VIN (onboard regulator provides 3.3V).
+Both sensors share the same 1-Wire bus (directly connected in parallel).
+The 4.7kΩ pull-up resistor connects VCC to DATA.
+```
+
 | DS18B20 | ESP8266 |
 |---------|---------|
 | VCC     | 3.3V    |
