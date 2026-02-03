@@ -97,9 +97,11 @@ void printAddress(DeviceAddress addr) {
 
 bool publishToFeed(uint8_t sensorIndex, float value) {
   char feedPath[64];
+  char valueStr[16];
   snprintf(feedPath, sizeof(feedPath), "%s/feeds/temp_sensor_%d",
            AIO_USERNAME, sensorIndex + 1);
-  return mqtt.publish(feedPath, value);
+  dtostrf(value, 1, 2, valueStr);
+  return mqtt.publish(feedPath, valueStr);
 }
 
 /* =========================================================
