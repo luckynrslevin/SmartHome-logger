@@ -1,6 +1,8 @@
 # SmartHome-logger
 
-ESP8266-based temperature logger with DS18B20 sensors and Adafruit IO integration.
+Temperature logger with DS18B20 sensors and Adafruit IO integration.
+
+Supports both ESP8266 and ESP32 boards.
 
 ## Features
 
@@ -9,15 +11,22 @@ ESP8266-based temperature logger with DS18B20 sensors and Adafruit IO integratio
 - Offline-resilient: stores measurements to LittleFS when WiFi is unavailable
 - Automatic backlog upload when connectivity is restored
 - RSSI logging for WiFi diagnostics
-- Watchdog-safe implementation
+- Multi-board support (ESP8266 and ESP32)
+
+## Supported Boards
+
+| Board | PlatformIO env | Data Pin |
+|-------|----------------|----------|
+| ESP8266 NodeMCU v2 | `esp8266` | D4 |
+| Sparkfun ESP32 Thing Plus | `esp32` | GPIO4 |
 
 ## Hardware
 
-- ESP8266 (NodeMCU, Wemos D1 Mini, etc.)
+- ESP8266 (NodeMCU, Wemos D1 Mini) **or** ESP32 (Sparkfun Thing Plus)
 - 2x DS18B20 temperature sensors
 - 4.7kΩ pull-up resistor on the data line
 
-### Wiring
+### Wiring - ESP8266
 
 ```
                         4.7kΩ
@@ -34,10 +43,6 @@ ESP8266-based temperature logger with DS18B20 sensors and Adafruit IO integratio
 └─────┘  │      GND ├──────────┤ GND      ────┼───────────────────────┤ GND          │
          │          │          │              │                       │              │
          └──────────┘          └──────────────┘                       └──────────────┘
-
-USB provides 5V power to ESP8266 VIN (onboard regulator provides 3.3V).
-Both sensors share the same 1-Wire bus (directly connected in parallel).
-The 4.7kΩ pull-up resistor connects VCC to DATA.
 ```
 
 | DS18B20 | ESP8266 |
@@ -45,6 +50,31 @@ The 4.7kΩ pull-up resistor connects VCC to DATA.
 | VCC     | 3.3V    |
 | GND     | GND     |
 | DATA    | D4      |
+
+### Wiring - ESP32 (Sparkfun Thing Plus)
+
+```
+                         4.7kΩ
+                       ┌─/\/\/─┐
+                       │       │
+┌─────┐  ┌───────────┐ │       │┌──────────────┐                       ┌──────────────┐
+│     │  │   ESP32   │ │       ││   DS18B20    │                       │   DS18B20    │
+│ USB │  │ Thing Plus│ │       ││   (Sensor 1) │                       │   (Sensor 2) │
+│  5V ├──┤ VUSB      │ │       ││              │                       │              │
+│     │  │      3.3V ├─┴───────┼┤ VCC      ────┼───────────────────────┤ VCC          │
+│ GND ├──┤ GND       │         ││              │                       │              │
+│     │  │      GPIO4├─────────┴┤ DATA     ────┼───────────────────────┤ DATA         │
+│     │  │           │          │              │                       │              │
+└─────┘  │       GND ├──────────┤ GND      ────┼───────────────────────┤ GND          │
+         │           │          │              │                       │              │
+         └───────────┘          └──────────────┘                       └──────────────┘
+```
+
+| DS18B20 | ESP32 Thing Plus |
+|---------|------------------|
+| VCC     | 3.3V             |
+| GND     | GND              |
+| DATA    | GPIO4            |
 
 ## Quick Start
 
@@ -79,10 +109,14 @@ Edit `src/config.h` with your credentials:
 
 ### 3. Build and flash
 
-Connect your ESP8266 via USB, then:
+Connect your board via USB, then:
 
 ```bash
-pio run -t upload
+# ESP8266
+pio run -e esp8266 -t upload
+
+# ESP32
+pio run -e esp32 -t upload
 ```
 
 ### 4. Monitor serial output
@@ -95,8 +129,11 @@ pio device monitor
 
 | Command | Description |
 |---------|-------------|
-| `pio run` | Build firmware |
-| `pio run -t upload` | Build and flash |
+| `pio run` | Build all environments |
+| `pio run -e esp8266` | Build for ESP8266 only |
+| `pio run -e esp32` | Build for ESP32 only |
+| `pio run -e esp8266 -t upload` | Build and flash ESP8266 |
+| `pio run -e esp32 -t upload` | Build and flash ESP32 |
 | `pio device monitor` | Serial monitor |
 | `pio run -t clean` | Clean build files |
 
@@ -119,16 +156,16 @@ Find your DS18B20 addresses using a scanner sketch, then update `sensorAddresses
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `PUBLISH_INTERVAL` | 60000 ms | Measurement interval |
-| `ONE_WIRE_BUS` | D4 | DS18B20 data pin |
+| `ONE_WIRE_BUS` | D4 (ESP8266) / GPIO4 (ESP32) | DS18B20 data pin |
 | `SENSOR_COUNT` | 2 | Number of sensors |
 
 ## Project Structure
 
 ```
 SmartHome-logger/
-├── platformio.ini      # Build configuration
+├── platformio.ini      # Build configuration (ESP8266 + ESP32)
 ├── src/
-│   ├── main.cpp        # Main firmware
+│   ├── main.cpp        # Main firmware (multi-board)
 │   ├── config.h        # Your credentials (gitignored)
 │   └── config.h.example
 └── README.md

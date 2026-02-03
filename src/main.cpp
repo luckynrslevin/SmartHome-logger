@@ -1,15 +1,23 @@
 /****************************************************
- *  ESP8266 + DS18B20 + Adafruit IO
+ *  ESP8266/ESP32 + DS18B20 + Adafruit IO
  *  Hardened for unstable WiFi
  *  - LittleFS persistent storage
  *  - RSSI logging
  *  - Watchdog safe
  ****************************************************/
 
-#include <ESP8266WiFi.h>
+#if defined(ESP32)
+  #include <WiFi.h>
+  #include <LittleFS.h>
+#elif defined(ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <LittleFS.h>
+#else
+  #error "Unsupported board. Use ESP8266 or ESP32."
+#endif
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <LittleFS.h>
 
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
@@ -40,7 +48,11 @@
 #define PUBLISH_INTERVAL 60000  // 1 minute
 
 // DS18B20
-#define ONE_WIRE_BUS D4
+#if defined(ESP32)
+  #define ONE_WIRE_BUS 4   // GPIO4 on ESP32
+#else
+  #define ONE_WIRE_BUS D4  // D4 on ESP8266
+#endif
 #define SENSOR_COUNT 2
 
 // Filesystem
@@ -79,7 +91,11 @@ unsigned long lastPublish = 0;
    ========================================================= */
 
 void initFS() {
+#if defined(ESP32)
+  if (!LittleFS.begin(true)) {  // true = format on fail
+#else
   if (!LittleFS.begin()) {
+#endif
     Serial.println("LittleFS mount FAILED");
   } else {
     Serial.println("LittleFS mounted");
@@ -128,7 +144,6 @@ bool ensureWiFi(uint32_t timeoutMs = 30000) {
       return false;
     }
     delay(250);
-    yield();
   }
 
   Serial.println("WiFi connected");
@@ -156,7 +171,6 @@ bool ensureMQTT(uint32_t timeoutMs = 10000) {
     }
 
     delay(1000);
-    yield();
   }
   return true;
 }
@@ -178,8 +192,6 @@ void publishStoredData() {
   }
 
   while (src.available()) {
-    yield();
-
     String line = src.readStringUntil('\n');
     if (line.length() < 5) continue;
 
@@ -223,7 +235,11 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
+#if defined(ESP32)
+  Serial.println("\nESP32 DS18B20 Logger");
+#else
   Serial.println("\nESP8266 DS18B20 Logger");
+#endif
 
   initFS();
   ensureWiFi();
@@ -270,5 +286,4 @@ void loop() {
 
   mqtt.processPackets(10);
   mqtt.ping();
-  yield();
 }
