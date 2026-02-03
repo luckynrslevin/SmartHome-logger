@@ -4,7 +4,7 @@
 
 ## Version
 
-V1.3
+V1.4
 
 ## Date
 2026-02-03
@@ -133,6 +133,12 @@ The system shall log "No sensors connected" if no DS18B20 sensors are discovered
 **FR-D-0006**
 The system shall log each measurement cycle with temperature values from all sensors.
 
+**FR-D-0007**
+The system shall log the firmware version at startup.
+
+**FR-D-0008**
+The firmware version shall be defined as a constant in the source code.
+
 ## 3.4. Data Storage
 
 **FR-DS-0001**
@@ -193,3 +199,23 @@ The README shall include wiring diagrams for each supported board.
 
 **NFR-DOC-0002**
 The README shall include step-by-step setup instructions for cloning, configuring, and flashing.
+
+## 4.6. Over-the-Air Updates
+
+**NFR-OTA-0001**
+The system shall support firmware updates over WiFi without requiring physical USB connection.
+
+**NFR-OTA-0002**
+The system shall use the ArduinoOTA protocol for over-the-air updates.
+
+**NFR-OTA-0003**
+OTA updates shall be protected with a configurable password stored in the configuration file.
+
+**NFR-OTA-0004**
+The system shall log OTA update progress and status to the serial console.
+
+**NFR-OTA-0005**
+The system shall continue normal measurement operations while listening for OTA update requests.
+
+**NFR-OTA-0006**
+The system shall automatically reboot after a successful OTA update.
