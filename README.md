@@ -12,6 +12,7 @@ Supports both ESP8266 and ESP32 boards.
 - Automatic backlog upload when connectivity is restored
 - RSSI logging for WiFi diagnostics
 - Multi-board support (ESP8266 and ESP32)
+- **OTA updates** - Update firmware over WiFi without USB connection
 
 ## Supported Boards
 
@@ -105,6 +106,7 @@ Edit `src/config.h` with your credentials:
 #define WIFI_PASSWORD   "your_wifi_password"
 #define AIO_USERNAME    "your_adafruit_username"
 #define AIO_KEY         "your_adafruit_key"
+#define OTA_PASSWORD    "your_ota_password"
 ```
 
 ### 3. Build and flash
@@ -166,6 +168,45 @@ DS18B20 sensors found: 3
 | `PUBLISH_INTERVAL` | 60000 ms | Measurement interval |
 | `ONE_WIRE_BUS` | D4 (ESP8266) / GPIO4 (ESP32) | DS18B20 data pin |
 | `MAX_SENSORS` | 10 | Maximum sensors supported |
+
+## OTA Updates
+
+The firmware supports over-the-air updates via WiFi. No USB connection required after initial flash.
+
+### Configuration
+
+Set your OTA password in `src/config.h`:
+
+```c
+#define OTA_PASSWORD    "your_secure_password"
+```
+
+### Upload via OTA
+
+```bash
+# ESP8266
+pio run -e esp8266 -t upload --upload-port smarthome-esp8266.local
+
+# ESP32
+pio run -e esp32 -t upload --upload-port smarthome-esp32.local
+```
+
+Or specify the IP address directly:
+
+```bash
+pio run -e esp8266 -t upload --upload-port 192.168.1.100
+```
+
+### Serial Output
+
+During OTA update, the serial console shows progress:
+
+```
+OTA Start: firmware
+OTA Progress: 50%
+OTA Progress: 100%
+OTA End - Rebooting...
+```
 
 ## Project Structure
 

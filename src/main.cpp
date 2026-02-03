@@ -10,9 +10,11 @@
 #if defined(ESP32)
   #include <WiFi.h>
   #include <LittleFS.h>
+  #include <ArduinoOTA.h>
 #elif defined(ESP8266)
   #include <ESP8266WiFi.h>
   #include <LittleFS.h>
+  #include <ArduinoOTA.h>
 #else
   #error "Unsupported board. Use ESP8266 or ESP32."
 #endif
@@ -22,6 +24,9 @@
 
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
+
+// Firmware version
+#define FIRMWARE_VERSION "1.0.0"
 
 /* =========================================================
    USER CONFIGURATION
@@ -37,6 +42,10 @@
 
 #if !defined(AIO_USERNAME) || !defined(AIO_KEY)
   #error "Missing Adafruit IO config. Copy config.h.example to config.h and fill in your values."
+#endif
+
+#if !defined(OTA_PASSWORD)
+  #error "Missing OTA password. Copy config.h.example to config.h and fill in your values."
 #endif
 
 // Adafruit IO server settings
@@ -304,6 +313,52 @@ void discoverSensors() {
 }
 
 /* =========================================================
+   OTA UPDATES
+   ========================================================= */
+
+void initOTA() {
+  // Set hostname for OTA
+#if defined(ESP32)
+  ArduinoOTA.setHostname("smarthome-esp32");
+#else
+  ArduinoOTA.setHostname("smarthome-esp8266");
+#endif
+
+  // Set OTA password
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "firmware";
+    } else {
+      type = "filesystem";
+    }
+    Serial.println("OTA Start: " + type);
+  });
+
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nOTA End - Rebooting...");
+  });
+
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("OTA Progress: %u%%\r", (progress / (total / 100)));
+  });
+
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA Error [%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+
+  ArduinoOTA.begin();
+  Serial.println("OTA ready");
+}
+
+/* =========================================================
    SETUP
    ========================================================= */
 
@@ -316,9 +371,11 @@ void setup() {
 #else
   Serial.println("\nESP8266 DS18B20 Logger");
 #endif
+  Serial.printf("Firmware version: %s\n", FIRMWARE_VERSION);
 
   initFS();
   ensureWiFi();
+  initOTA();
   discoverSensors();
 
   Serial.println("Setup complete");
@@ -329,6 +386,9 @@ void setup() {
    ========================================================= */
 
 void loop() {
+  // Handle OTA updates
+  ArduinoOTA.handle();
+
   unsigned long now = millis();
 
   // --- Measurement cycle ---
