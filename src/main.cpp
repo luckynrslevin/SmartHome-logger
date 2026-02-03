@@ -103,9 +103,9 @@ void initFS() {
 }
 
 bool hasStoredData() {
-  if (!LittleFS.exists(DATA_FILE)) return false;
   File f = LittleFS.open(DATA_FILE, "r");
-  bool hasData = f && f.size() > 0;
+  if (!f) return false;
+  bool hasData = f.size() > 0;
   f.close();
   return hasData;
 }
@@ -286,4 +286,6 @@ void loop() {
 
   mqtt.processPackets(10);
   mqtt.ping();
+
+  delay(100);  // Prevent tight loop
 }
