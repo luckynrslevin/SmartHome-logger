@@ -103,6 +103,10 @@ void initFS() {
 }
 
 bool hasStoredData() {
+#if defined(ESP32)
+  // ESP32 logs errors when opening non-existent files, so check first
+  if (!LittleFS.exists(DATA_FILE)) return false;
+#endif
   File f = LittleFS.open(DATA_FILE, "r");
   if (!f) return false;
   bool hasData = f.size() > 0;
