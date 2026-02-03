@@ -4,6 +4,7 @@
  *  - LittleFS persistent storage
  *  - RSSI logging
  *  - Watchdog safe
+ *  - Dynamic sensor detection (0-10 sensors)
  ****************************************************/
 
 #if defined(ESP32)
@@ -53,7 +54,7 @@
 #else
   #define ONE_WIRE_BUS D4  // D4 on ESP8266
 #endif
-#define SENSOR_COUNT 2
+#define MAX_SENSORS 10
 
 // Filesystem
 #define DATA_FILE "/temps.csv"
@@ -66,12 +67,6 @@ WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT,
                           AIO_USERNAME, AIO_KEY);
 
-Adafruit_MQTT_Publish tempFeed1 =
-  Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temp_sensor_1");
-
-Adafruit_MQTT_Publish tempFeed2 =
-  Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temp_sensor_2");
-
 /* =========================================================
    DS18B20
    ========================================================= */
@@ -79,12 +74,33 @@ Adafruit_MQTT_Publish tempFeed2 =
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-DeviceAddress sensorAddresses[SENSOR_COUNT] = {
-  {0x28, 0xE1, 0x17, 0x32, 0x00, 0x00, 0x00, 0x62},
-  {0x28, 0x8F, 0xBF, 0x31, 0x00, 0x00, 0x00, 0x37}
-};
+DeviceAddress sensorAddresses[MAX_SENSORS];
+uint8_t sensorCount = 0;
+float temperatures[MAX_SENSORS];
 
 unsigned long lastPublish = 0;
+
+/* =========================================================
+   HELPER: Print sensor address
+   ========================================================= */
+
+void printAddress(DeviceAddress addr) {
+  for (uint8_t i = 0; i < 8; i++) {
+    if (addr[i] < 16) Serial.print("0");
+    Serial.print(addr[i], HEX);
+  }
+}
+
+/* =========================================================
+   HELPER: Build MQTT feed path
+   ========================================================= */
+
+bool publishToFeed(uint8_t sensorIndex, float value) {
+  char feedPath[64];
+  snprintf(feedPath, sizeof(feedPath), "%s/feeds/temp_sensor_%d",
+           AIO_USERNAME, sensorIndex + 1);
+  return mqtt.publish(feedPath, value);
+}
 
 /* =========================================================
    FILESYSTEM
@@ -114,7 +130,7 @@ bool hasStoredData() {
   return hasData;
 }
 
-void storeToFS(float t1, float t2) {
+void storeToFS(float temps[], uint8_t count) {
   int rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
 
   File f = LittleFS.open(DATA_FILE, "a");
@@ -123,8 +139,12 @@ void storeToFS(float t1, float t2) {
     return;
   }
 
-  // millis,temp1,temp2,rssi
-  f.printf("%lu,%.2f,%.2f,%d\n", millis(), t1, t2, rssi);
+  // Format: millis,count,temp1,temp2,...,tempN,rssi
+  f.printf("%lu,%d", millis(), count);
+  for (uint8_t i = 0; i < count; i++) {
+    f.printf(",%.2f", temps[i]);
+  }
+  f.printf(",%d\n", rssi);
   f.close();
 
   Serial.println("Measurement stored to FS");
@@ -199,29 +219,55 @@ void publishStoredData() {
     String line = src.readStringUntil('\n');
     if (line.length() < 5) continue;
 
-    unsigned long ts;
-    float t1, t2;
-    int rssi;
+    // Parse: millis,count,temp1,...,tempN,rssi
+    int pos = 0;
+    int nextComma;
 
-    if (sscanf(line.c_str(), "%lu,%f,%f,%d",
-               &ts, &t1, &t2, &rssi) != 4) {
-      continue;
+    // Skip millis
+    nextComma = line.indexOf(',', pos);
+    if (nextComma < 0) continue;
+    pos = nextComma + 1;
+
+    // Get count
+    nextComma = line.indexOf(',', pos);
+    if (nextComma < 0) continue;
+    uint8_t count = line.substring(pos, nextComma).toInt();
+    pos = nextComma + 1;
+
+    if (count == 0 || count > MAX_SENSORS) continue;
+
+    // Get temperatures
+    float temps[MAX_SENSORS];
+    for (uint8_t i = 0; i < count; i++) {
+      nextComma = line.indexOf(',', pos);
+      if (nextComma < 0) break;
+      temps[i] = line.substring(pos, nextComma).toFloat();
+      pos = nextComma + 1;
     }
 
-    Serial.printf("Publishing %.2f / %.2f °C (RSSI %d)\n",
-                  t1, t2, rssi);
+    // Get RSSI (remaining after last comma)
+    int rssi = line.substring(pos).toInt();
 
-    if (!tempFeed1.publish(t1) ||
-        !tempFeed2.publish(t2)) {
+    Serial.printf("Publishing %d sensors (RSSI %d)\n", count, rssi);
+
+    bool publishOk = true;
+    for (uint8_t i = 0; i < count && publishOk; i++) {
+      Serial.printf("  Sensor %d: %.2f °C\n", i + 1, temps[i]);
+      if (!publishToFeed(i, temps[i])) {
+        publishOk = false;
+      }
+      mqtt.processPackets(10);
+      delay(50);
+    }
+
+    if (!publishOk) {
       // re-queue unsent data
       tmp.println(line);
       tmp.print(src.readString());
       break;
     }
 
-    mqtt.processPackets(10);
     mqtt.ping();
-    delay(50);
   }
 
   src.close();
@@ -229,6 +275,30 @@ void publishStoredData() {
 
   LittleFS.remove(DATA_FILE);
   LittleFS.rename("/tmp.csv", DATA_FILE);
+}
+
+/* =========================================================
+   SENSOR DISCOVERY
+   ========================================================= */
+
+void discoverSensors() {
+  sensors.begin();
+
+  sensorCount = sensors.getDeviceCount();
+  if (sensorCount > MAX_SENSORS) {
+    sensorCount = MAX_SENSORS;
+  }
+
+  Serial.printf("DS18B20 sensors found: %d\n", sensorCount);
+
+  for (uint8_t i = 0; i < sensorCount; i++) {
+    if (sensors.getAddress(sensorAddresses[i], i)) {
+      sensors.setResolution(sensorAddresses[i], 12);
+      Serial.printf("  Sensor %d: ", i + 1);
+      printAddress(sensorAddresses[i]);
+      Serial.println();
+    }
+  }
 }
 
 /* =========================================================
@@ -247,12 +317,7 @@ void setup() {
 
   initFS();
   ensureWiFi();
-
-  sensors.begin();
-  sensors.setResolution(12);
-
-  Serial.print("DS18B20 devices found: ");
-  Serial.println(sensors.getDeviceCount());
+  discoverSensors();
 
   Serial.println("Setup complete");
 }
@@ -268,18 +333,29 @@ void loop() {
   if (now - lastPublish >= PUBLISH_INTERVAL) {
     lastPublish = now;
 
-    sensors.requestTemperatures();
-
-    float t1 = sensors.getTempC(sensorAddresses[0]);
-    float t2 = sensors.getTempC(sensorAddresses[1]);
-
-    if (t1 != DEVICE_DISCONNECTED_C &&
-        t2 != DEVICE_DISCONNECTED_C) {
-
-      Serial.printf("Measured: %.2f / %.2f °C\n", t1, t2);
-      storeToFS(t1, t2);
+    if (sensorCount == 0) {
+      Serial.println("No sensors connected");
     } else {
-      Serial.println("Sensor error");
+      sensors.requestTemperatures();
+
+      bool allValid = true;
+      Serial.print("Measured: ");
+
+      for (uint8_t i = 0; i < sensorCount; i++) {
+        temperatures[i] = sensors.getTempC(sensorAddresses[i]);
+        if (temperatures[i] == DEVICE_DISCONNECTED_C) {
+          allValid = false;
+        }
+        if (i > 0) Serial.print(" / ");
+        Serial.printf("%.2f", temperatures[i]);
+      }
+      Serial.println(" °C");
+
+      if (allValid) {
+        storeToFS(temperatures, sensorCount);
+      } else {
+        Serial.println("Sensor error - some readings invalid");
+      }
     }
   }
 
