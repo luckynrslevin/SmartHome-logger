@@ -364,12 +364,12 @@ void initOTA() {
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);  // Wait for serial monitor to connect
 
 #if defined(ESP32)
-  Serial.println("\nESP32 DS18B20 Logger");
+  Serial.println("\n\nESP32 DS18B20 Logger");
 #else
-  Serial.println("\nESP8266 DS18B20 Logger");
+  Serial.println("\n\nESP8266 DS18B20 Logger");
 #endif
   Serial.printf("Firmware version: %s\n", FIRMWARE_VERSION);
 
@@ -378,7 +378,7 @@ void setup() {
   initOTA();
   discoverSensors();
 
-  Serial.println("Setup complete");
+  Serial.printf("Setup complete (v%s)\n", FIRMWARE_VERSION);
 }
 
 /* =========================================================
