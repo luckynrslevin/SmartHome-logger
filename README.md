@@ -6,7 +6,7 @@ Supports both ESP8266 and ESP32 boards.
 
 ## Features
 
-- Dual DS18B20 temperature sensor support
+- **Dynamic DS18B20 sensor detection** - Supports 0-10 sensors, auto-discovered at startup
 - Publishes to Adafruit IO via MQTT
 - Offline-resilient: stores measurements to LittleFS when WiFi is unavailable
 - Automatic backlog upload when connectivity is restored
@@ -23,7 +23,7 @@ Supports both ESP8266 and ESP32 boards.
 ## Hardware
 
 - ESP8266 (NodeMCU, Wemos D1 Mini) **or** ESP32 (Sparkfun Thing Plus)
-- 2x DS18B20 temperature sensors
+- 0-10 DS18B20 temperature sensors (auto-detected)
 - 4.7kΩ pull-up resistor on the data line
 
 ### Wiring - ESP8266
@@ -141,15 +141,23 @@ pio device monitor
 
 ### Adafruit IO
 
-Create two feeds in your Adafruit IO account:
+Create feeds in your Adafruit IO account for each sensor:
 - `temp_sensor_1`
 - `temp_sensor_2`
+- ... up to `temp_sensor_10`
 
 Get your API key from https://io.adafruit.com → My Key
 
-### Sensor Addresses
+### Sensor Detection
 
-Find your DS18B20 addresses using a scanner sketch, then update `sensorAddresses[]` in `src/main.cpp`.
+Sensors are automatically discovered at startup. The serial output shows each sensor's address:
+
+```
+DS18B20 sensors found: 3
+  Sensor 1: 28E11732000000062
+  Sensor 2: 288FBF31000000037
+  Sensor 3: 28AA12340000000FF
+```
 
 ### Settings
 
@@ -157,7 +165,7 @@ Find your DS18B20 addresses using a scanner sketch, then update `sensorAddresses
 |---------|---------|-------------|
 | `PUBLISH_INTERVAL` | 60000 ms | Measurement interval |
 | `ONE_WIRE_BUS` | D4 (ESP8266) / GPIO4 (ESP32) | DS18B20 data pin |
-| `SENSOR_COUNT` | 2 | Number of sensors |
+| `MAX_SENSORS` | 10 | Maximum sensors supported |
 
 ## Project Structure
 
@@ -176,7 +184,12 @@ SmartHome-logger/
 Measurements are stored locally in `/temps.csv` with the format:
 
 ```
-millis,temp1,temp2,rssi
+millis,count,temp1,temp2,...,tempN,rssi
+```
+
+Example with 3 sensors:
+```
+123456,3,21.50,22.75,19.25,-65
 ```
 
 ## License

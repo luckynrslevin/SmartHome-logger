@@ -4,7 +4,7 @@
 
 ## Version
 
-V1.2
+V1.3
 
 ## Date
 2026-02-03
@@ -79,21 +79,39 @@ This document specifies the functional requirements, behavior, interfaces and co
 ```
 
 # 3. Functional requirements
+
 ## 3.1. Measurement functionality
 
 **FR-M-0001**
-The system shall support 0 to 10 DS18B20 sensor connected.
+The system shall automatically detect and support 0 to 10 DS18B20 sensors connected to the 1-Wire bus.
 
 **FR-M-0002**
 The system shall measure temperature in °C from each DS18B20 sensor connected.
 
 **FR-M-0003**
-All measurements shall be performend in an interval of **60 seconds**
+All measurements shall be performed in an interval of **60 seconds**.
+
+**FR-M-0004**
+The system shall discover all connected DS18B20 sensors at startup by scanning the 1-Wire bus.
+
+**FR-M-0005**
+The system shall store the unique 64-bit address of each discovered sensor.
+
+**FR-M-0006**
+The system shall set 12-bit resolution for all discovered sensors.
 
 ## 3.2. Sending data to IoT backend
-### 3.2.1. Adafruit IoT backen
+
+### 3.2.1. Adafruit IoT backend
+
 **FR-AIoTB-0001**
 The system shall send data to the Adafruit IoT backend after each measurement.
+
+**FR-AIoTB-0002**
+The system shall publish each sensor's temperature to a separate MQTT feed named `temp_sensor_N` where N is the sensor index (1-10).
+
+**FR-AIoTB-0003**
+The system shall only publish data for sensors that were discovered at startup.
 
 ## 3.3. Diagnostics
 
@@ -101,10 +119,35 @@ The system shall send data to the Adafruit IoT backend after each measurement.
 The system shall log the WiFi signal strength (RSSI) with each measurement for diagnostic purposes.
 
 **FR-D-0002**
-The stored measurement record shall include: timestamp, temperature values, and RSSI value.
+The stored measurement record shall include: timestamp, sensor count, temperature values, and RSSI value.
+
+**FR-D-0003**
+At startup, the system shall log the number of DS18B20 sensors discovered.
+
+**FR-D-0004**
+At startup, the system shall log the 64-bit address of each discovered sensor.
+
+**FR-D-0005**
+The system shall log "No sensors connected" if no DS18B20 sensors are discovered.
+
+**FR-D-0006**
+The system shall log each measurement cycle with temperature values from all sensors.
+
+## 3.4. Data Storage
+
+**FR-DS-0001**
+Measurements shall be stored in CSV format with fields: timestamp, sensor count, temperature values (one per sensor), and RSSI.
+
+**FR-DS-0002**
+The storage format shall be: `millis,count,temp1,temp2,...,tempN,rssi`
+
+**FR-DS-0003**
+The system shall only store measurements when all sensor readings are valid.
 
 #  4. Non functional requirements
+
 ## 4.1. WIFI Connectivity
+
 **NFR-WIFI-0001**
 The system shall be resillient to unstable wifi connectivity.
 
