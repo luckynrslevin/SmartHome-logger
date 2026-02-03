@@ -374,9 +374,9 @@ void setup() {
   Serial.printf("Firmware version: %s\n", FIRMWARE_VERSION);
 
   initFS();
+  discoverSensors();
   ensureWiFi();
   initOTA();
-  discoverSensors();
 
   Serial.printf("Setup complete (v%s)\n", FIRMWARE_VERSION);
 }
