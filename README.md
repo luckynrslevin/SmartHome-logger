@@ -183,18 +183,20 @@ Set your OTA password in `src/config.h`:
 
 ### Upload via OTA
 
+**Note:** First flash must be via USB. After that, OTA updates work wirelessly.
+
 ```bash
 # ESP8266
-pio run -e esp8266 -t upload --upload-port smarthome-esp8266.local
+pio run -e esp8266 -t upload --upload-port smarthome-esp8266.local -a YOUR_OTA_PASSWORD
 
 # ESP32
-pio run -e esp32 -t upload --upload-port smarthome-esp32.local
+pio run -e esp32 -t upload --upload-port smarthome-esp32.local -a YOUR_OTA_PASSWORD
 ```
 
 Or specify the IP address directly:
 
 ```bash
-pio run -e esp8266 -t upload --upload-port 192.168.1.100
+pio run -e esp32 -t upload --upload-port 192.168.1.100 -a YOUR_OTA_PASSWORD
 ```
 
 ### Serial Output
