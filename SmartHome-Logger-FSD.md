@@ -100,6 +100,9 @@ The system shall store the unique 64-bit address of each discovered sensor.
 **FR-M-0006**
 The system shall set 12-bit resolution for all discovered sensors.
 
+**FR-M-0007**
+After boot the initial measurement of the temperature shows a wrong value, therefore the system shall omit the first temperature measurement after boot.
+
 ## 3.2. Sending data to IoT backend
 
 ### 3.2.1. Adafruit IoT backend
