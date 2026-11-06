@@ -83,6 +83,7 @@ DeviceAddress sensorAddresses[MAX_SENSORS];
 uint8_t sensorCount = 0;
 float temperatures[MAX_SENSORS];
 unsigned long lastPublish = 0;
+bool firstMeasurementDone = false;  // FR-M-0007: skip first measurement after boot
 
 void printAddress(DeviceAddress addr) {
   for (uint8_t i = 0; i < 8; i++) {
@@ -497,8 +498,13 @@ void loop() {
         if (i > 0) Serial.print(" / ");
         Serial.printf("%.2f", temperatures[i]);
       }
-      Serial.println(" C");
-      if (allValid) {
+      Serial.println(" °C");
+
+      // FR-M-0007: Skip first measurement after boot (initial reading is unreliable)
+      if (!firstMeasurementDone) {
+        Serial.println("(First measurement skipped - FR-M-0007)");
+        firstMeasurementDone = true;
+      } else if (allValid) {
         storeToFS(temperatures, sensorCount);
       } else {
         Serial.println("Sensor error — some readings invalid");
