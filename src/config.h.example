@@ -17,4 +17,21 @@
 #define AIO_USERNAME    "your_adafruit_username"
 #define AIO_KEY         "your_adafruit_key"
 
-#endif
+// Private MQTT broker on the VPS, routed over the OpenWrt WireGuard tunnel.
+#define VPS_MQTT_HOST          "10.77.77.2"
+#define VPS_MQTT_PORT          8883
+#define VPS_MQTT_USERNAME      "iotdevice"
+#define VPS_MQTT_PASSWORD      "REPLACE_WITH_YOUR_MQTT_DEVICE_PASSWORD"
+#define VPS_MQTT_TOPIC_PREFIX  "iot/temperature"
+
+// Paste the complete contents of /etc/mosquitto/certs/ca.crt between
+// the BEGIN/END lines below. This must be the PUBLIC CA certificate,
+// never the CA private key (ca.key). Keep the PEM header/footer lines.
+// Connecting by IP is validated against the certificate's IP SAN 10.77.77.2.
+static const char VPS_MQTT_CA_CERT[] PROGMEM = R"VPSCA(
+-----BEGIN CERTIFICATE-----
+PASTE_THE_COMPLETE_CONTENTS_OF_ca.crt_HERE
+-----END CERTIFICATE-----
+)VPSCA";
+
+#endif // CONFIG_H
