@@ -17,4 +17,8 @@
 #define AIO_USERNAME    "your_adafruit_username"
 #define AIO_KEY         "your_adafruit_key"
 
+// OTA Update password
+// Used to protect firmware updates over WiFi
+#define OTA_PASSWORD    "your_ota_password"
+
 #endif
